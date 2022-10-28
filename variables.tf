@@ -20,6 +20,10 @@ variable lambda_code_source_dir {
   description = "An absolute path to the directory containing the code to upload to lambda"
 }
 
+variable lambda_zip_file_name {
+  description = "The name of the zip file for the lambda source code (including .zip)"
+}
+
 variable file_globs {
   type        = list(string)
   default     = ["index.js", "node_modules/**", "yarn.lock", "package.json"]
