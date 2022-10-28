@@ -6,33 +6,33 @@
  * Lambdas are uploaded to via zip files, so we create a zip out of a given directory.
  * In the future, we may want to source our code from an s3 bucket instead of a local zip.
  */
-data "archive_file" "zip_file_for_lambda" {
-  type        = "zip"
-  output_path = "${var.local_file_dir}/${var.name}.zip"
+# data "archive_file" "zip_file_for_lambda" {
+#   type        = "zip"
+#   output_path = "${var.local_file_dir}/${var.name}.zip"
 
-  dynamic "source" {
-    for_each = distinct(flatten([
-      for blob in var.file_globs :
-      fileset(var.lambda_code_source_dir, blob)
-    ]))
-    content {
-      content = try(
-        file("${var.lambda_code_source_dir}/${source.value}"),
-        filebase64("${var.lambda_code_source_dir}/${source.value}"),
-      )
-      filename = source.value
-    }
-  }
+#   dynamic "source" {
+#     for_each = distinct(flatten([
+#       for blob in var.file_globs :
+#       fileset(var.lambda_code_source_dir, blob)
+#     ]))
+#     content {
+#       content = try(
+#         file("${var.lambda_code_source_dir}/${source.value}"),
+#         filebase64("${var.lambda_code_source_dir}/${source.value}"),
+#       )
+#       filename = source.value
+#     }
+#   }
 
-  # Optionally write a `config.json` file if any plaintext params were given
-  dynamic "source" {
-    for_each = length(keys(var.plaintext_params)) > 0 ? ["true"] : []
-    content {
-      content  = jsonencode(var.plaintext_params)
-      filename = var.config_file_name
-    }
-  }
-}
+#   # Optionally write a `config.json` file if any plaintext params were given
+#   dynamic "source" {
+#     for_each = length(keys(var.plaintext_params)) > 0 ? ["true"] : []
+#     content {
+#       content  = jsonencode(var.plaintext_params)
+#       filename = var.config_file_name
+#     }
+#   }
+# }
 
 /**
  * Upload the build artifact zip file to S3.
@@ -42,9 +42,9 @@ data "archive_file" "zip_file_for_lambda" {
  */
 resource "aws_s3_bucket_object" "artifact" {
   bucket = var.s3_artifact_bucket
-  key    = "${var.name}.zip"
-  source = data.archive_file.zip_file_for_lambda.output_path
-  etag   = data.archive_file.zip_file_for_lambda.output_md5
+  key    = "${var.lambda_zip_file_name}"
+  source = "${var.lambda_code_source_dir}/${var.lambda_zip_file_name}"
+  etag   = filemd5("${var.lambda_code_source_dir}/${var.lambda_zip_file_name}")
   tags   = var.tags
 }
 
@@ -59,7 +59,7 @@ resource "aws_lambda_function" "lambda" {
   s3_bucket         = var.s3_artifact_bucket
   s3_key            = aws_s3_bucket_object.artifact.id
   s3_object_version = aws_s3_bucket_object.artifact.version_id
-  source_code_hash  = filebase64sha256(data.archive_file.zip_file_for_lambda.output_path)
+  source_code_hash  = filebase64sha256("${var.lambda_code_source_dir}/${var.lambda_zip_file_name}")
 
   publish = true
   handler = var.handler
