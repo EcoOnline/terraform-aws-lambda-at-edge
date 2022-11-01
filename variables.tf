@@ -103,3 +103,7 @@ variable cloudwatch_log_groups_kms_arn {
   default     = null
 }
 
+variable retention_in_days {
+  description = "The retention period for the CloudWatch Log group"
+  default     = 30
+}
