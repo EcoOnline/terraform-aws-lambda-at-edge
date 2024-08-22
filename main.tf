@@ -40,7 +40,7 @@
  * Doing this makes the plans more resiliant, where it won't always
  * appear that the function needs to be updated
  */
-resource "aws_s3_object" "artifact" {
+resource "aws_s3_bucket_object" "artifact" {
   bucket = var.s3_artifact_bucket
   key    = "${var.lambda_zip_file_name}"
   source = "${var.lambda_code_source_dir}/${var.lambda_zip_file_name}"
@@ -66,6 +66,12 @@ resource "aws_lambda_function" "lambda" {
   runtime = var.runtime
   role    = aws_iam_role.lambda_at_edge.arn
   tags    = var.tags
+
+  lifecycle {
+    ignore_changes = [
+      last_modified,
+    ]
+  }
 }
 
 /**
